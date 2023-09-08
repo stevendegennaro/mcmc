@@ -1,0 +1,7 @@
+c/*.o
+__pycache__/
+Rfunctions/
+backups/
+c/simCluster.c.safe
+c/simCluster.so
+outputs/
