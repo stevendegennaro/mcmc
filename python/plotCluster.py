@@ -6,7 +6,6 @@ import pandas as pd
 import sys
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button, RangeSlider,TextBox
-# from matplotlib.container import ErrorbarContainer
 
 ############################
 ##### Create Functions #####
@@ -173,7 +172,7 @@ def refreshLimits():
 	if 'brightLimit_slider' in globals():
 		brightLimit_slider.valmin = maxy
 		brightLimit_slider.valmax = miny
-		brightLimit_slider.ax.set_xlim(brightLimit_slider.valmin,brightLimit_slider.valmax)
+		brightLimit_slider.ax.set_xlim(brightLimit_slider.valmax,brightLimit_slider.valmin)
 
 def plotIso():
 	global isoPoints
