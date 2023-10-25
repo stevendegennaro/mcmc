@@ -8,8 +8,13 @@ from getCMacros import getCMacros
 import math
 pdDataFrame = TypeVar('pd.core.frame.DataFrame')
 
+# Read in the shared object file that contains all the variable,
+# structures, and functions in C that will be needed by Python
 c = ctypes.CDLL("../c/simCluster.so")
 
+# The signal 2 noise coefficients for each band of photometry
+# Used by scatterPhot to add noise to simulated cluster star photometry
+# Originally defined in scatterCuster.c
 s2nCoeffs = [
 	[9.33989,  0.3375778],  # U 
 	[10.0478,  0.3462758],  # B 
@@ -33,6 +38,10 @@ macros.update(getCMacros("../c/evolve.h"))
 for key in macros:
 	exec(key + f" = {macros[key]}")
 
+#### Use ctypes to create classes that mirror the structures
+#### used by simCluster and MCMC for models, clusters, and stars
+
+#### Model structure ####
 class model(ctypes.Structure):
 	_fields_ = [('evoModel',ctypes.c_int),
 				('brownDwarfEvol',ctypes.c_int),
@@ -51,6 +60,7 @@ class model(ctypes.Structure):
 			string += f" {getattr(self,self._fields_[i][0])}\n"
 		return string
 
+#### Model pointer ####
 modelPtr = ctypes.POINTER(model)
 
 #### Star Structure ####
@@ -92,6 +102,8 @@ class star(ctypes.Structure):
 					string += f"{array[j]}\n"
 				string += "\n"
 		return string
+
+#### Star pointer ####
 starPtr = ctypes.POINTER(star)
 
 #### Cluster Structure ####
@@ -131,9 +143,10 @@ class cluster(ctypes.Structure):
 		# 	string += str(c.getStarPtr(self,j).contents)
 		return string
 
+#### Cluster pointer ####
 clusterPtr = ctypes.POINTER(cluster)
 
-# Define the interface to getter functions:
+#### Argument and result types for functions defined in c ####
 c.getStarPtr.restype = starPtr
 c.getStarPtr.argtypes = [clusterPtr]
 
@@ -166,15 +179,20 @@ c.getAgeLimit.argtypes = [ctypes.c_int]
 c.getFeHLimit.restype = ctypes.c_double
 c.getFeHLimit.argtypes = [ctypes.c_int]
 
+# Get the minimum mass for different model sets
 def getMinMass(modelSet: int) -> float:
 	if(modelSet == YALE): return  0.4
 	if(modelSet == DSED): return 0.25
 	return 0.15
 
+# Get a list of the filter names
+def getFilters():
+	return [c.getFilterName(filt).decode() for filt in range(FILTS) if c.getUseFilt(filt)]
 
 ### Creates a cluster, allocates memory for it (in C), initializes
-### the cluster and star memory. Returns a pointer to the cluster
-### setGlobals needs to be run first or this will choke
+### memory for the cluster (which in turn initiailzes the memory for the
+### array of stars. Returns a pointer to the cluster
+### c.setGlobals needs to be run first or this will choke
 def createCluster(params: Params) -> clusterPtr:
 	pCluster = c.allocCluster(params.nSystems[0])
 	pCluster.contents.evoModels.mainSequenceEvol = params.msRgbModels
@@ -184,6 +202,7 @@ def createCluster(params: Params) -> clusterPtr:
 	pCluster.contents.evoModels.minMass = getMinMass(pCluster.contents.evoModels.mainSequenceEvol)
 	return pCluster
 
+### Change to adifferent model set. Cluster needs to be re-evolved to update photometry
 def switchModels(pCluster: clusterPtr, params: Params) -> None:
 	pCluster.contents.evoModels.mainSequenceEvol = params.msRgbModels
 	pCluster.contents.evoModels.filterSet = params.filterSet
@@ -191,6 +210,7 @@ def switchModels(pCluster: clusterPtr, params: Params) -> None:
 	pCluster.contents.evoModels.brownDwarfEvol = params.BDmodel
 	pCluster.contents.evoModels.minMass = getMinMass(pCluster.contents.evoModels.mainSequenceEvol)
 
+### Set initial cluster parameters. Cluster needs to be evolved to get photometry
 def setClusterParams(pCluster: clusterPtr, params: Params, pop: int):
 	pCluster.contents.nStars = params.nSystems[pop]
 	c.reallocStarsArray(pCluster)
@@ -201,7 +221,8 @@ def setClusterParams(pCluster: clusterPtr, params: Params, pop: int):
 	pCluster.contents.parameter[MOD] = params.distMod[pop]
 	pCluster.contents.parameter[ABS] = params.Av[pop]
 
-# Changes the values of cluster parameters without reallocating stars array
+### Changes the values of cluster parameters without reallocating stars array
+### Cluster needs to be re-evolved to get new photometry
 def changeClusterParams(pCluster: clusterPtr, params: Params, pop: int):
 	pCluster.contents.M_wd_up = params.WDMassUp[pop]
 	pCluster.contents.parameter[AGE] = params.logClusAge[pop]
@@ -210,18 +231,12 @@ def changeClusterParams(pCluster: clusterPtr, params: Params, pop: int):
 	pCluster.contents.parameter[MOD] = params.distMod[pop]
 	pCluster.contents.parameter[ABS] = params.Av[pop]
 
+### Get a single isochrone directly from evolve.c
 def populateIso(pCluster: clusterPtr) -> None:
 	c.returnIso(pCluster)
-	# pCluster.contents.nStars = 10000
-	# c.reallocStarsArray(pCluster)
-	# minMass = pCluster.contents.evoModels.minMass
-	# maxMass = pCluster.contents.M_wd_up
-	# for j in range(pCluster.contents.nStars):
-	# 	pStar = c.getStarPtr(pCluster,j)
-	# 	pStar.contents.U = minMass + j*(maxMass - minMass)/pCluster.contents.nStars
-	# c.evolve(pCluster,-1)
 
 
+### Randomly draws from the IMF to create a cluster
 def populateCluster(pCluster: clusterPtr, fractionBinary: float = 0.0) -> None:
 	for j in range(pCluster.contents.nStars):	# for all systems in the cluster
 		c.getStarPtr(pCluster,j).contents.id = j
@@ -249,6 +264,7 @@ def populateCluster(pCluster: clusterPtr, fractionBinary: float = 0.0) -> None:
 
 	c.evolve(pCluster, -1)							# Evolve stars
 
+### Create random field stars
 def populateFieldStars(params: Params, minV: float, maxV: float) -> None:
 
 	def pow(x,y):
@@ -308,7 +324,9 @@ def populateFieldStars(params: Params, minV: float, maxV: float) -> None:
 	else:
 		return None
 
-def clusterToDataFrame(pCluster: clusterPtr) -> pdDataFrame:
+### Takes the photometry and other data from the cluster structure and puts it
+### into a list in the same order as the old simCluster. Returns the list
+def clusterToList(pCluster: clusterPtr) -> List[List]:
 	data = []
 	for j in range(pCluster.contents.nStars):
 		star = c.getStarPtr(pCluster,j)
@@ -327,14 +345,37 @@ def clusterToDataFrame(pCluster: clusterPtr) -> pdDataFrame:
 				c.getLTau(1)]
 		line.extend([star.contents.photometry[filt] for filt in range(FILTS) if c.getUseFilt(filt)])
 		data.append(line)
+	return data
+
+### Takes the photometry and other data from the cluster structure and puts it
+### into a DataFrame in the same order as the old simCluster. Returns the DataFrame
+def clusterToDataFrame(pCluster: clusterPtr) -> pdDataFrame:
+	data = clusterToList(pCluster)
+	# data = []
+	# for j in range(pCluster.contents.nStars):
+	# 	star = c.getStarPtr(pCluster,j)
+	# 	line = [star.contents.id, 
+	# 			c.getMass1(star,pCluster),
+	# 			star.contents.status[0],
+	# 			star.contents.massNow[0] if star.contents.status[0] == 3 else 0.0,
+	# 			star.contents.wdLogTeff[0],
+	# 			0,
+	# 			c.getLTau(0),
+	# 			c.getMass2(star,pCluster),
+	# 			star.contents.status[1],
+	# 			star.contents.massNow[1] if star.contents.status[1] == 3 else 0.0,
+	# 			star.contents.wdLogTeff[1],
+	# 			0,
+	# 			c.getLTau(1)]
+	# 	line.extend([star.contents.photometry[filt] for filt in range(FILTS) if c.getUseFilt(filt)])
+	# 	data.append(line)
 	columns =  ["id","mass1","stage1", "wdM1", "wdType1", "wdLogTeff1", "ltau1","mass2","stage2", "wdM2", "wdType2", "wdLogTeff2", "ltau2"]
 	columns.extend([c.getFilterName(filt).decode() for filt in range(FILTS) if c.getUseFilt(filt)])
 	df = pd.DataFrame(data, columns = columns)
 	return df
 
-def getFilters():
-	return [c.getFilterName(filt).decode() for filt in range(FILTS) if c.getUseFilt(filt)]
-
+### Takes a DataFrame in simCluster format and turns it into a cluster structure
+### Puts the result in the cluster pointed to by pCluster
 def dataFrameToCluster(pCluster: clusterPtr, data: pdDataFrame) -> None:
 	c.initCluster(pCluster)
 	pCluster.contents.nStars = len(data.index)
@@ -363,30 +404,13 @@ def dataFrameToCluster(pCluster: clusterPtr, data: pdDataFrame) -> None:
 			if c.getUseFilt(filt):
 				star.contents.photometry[filt] = row[c.getFilterName(filt).decode()]
 
-def clusterToList(pCluster: clusterPtr) -> List[List]:
-	data = []
-	for j in range(pCluster.contents.nStars):
-		star = c.getStarPtr(pCluster,j)
-		line = [star.contents.id, 
-				c.getMass1(star,pCluster),
-				star.contents.status[0],
-				star.contents.massNow[0] if star.contents.status[0] == 3 else 0.0,
-				star.contents.wdLogTeff[0],
-				0,
-				c.getLTau(0),
-				c.getMass2(star,pCluster),
-				star.contents.status[1],
-				star.contents.massNow[1] if star.contents.status[1] == 3 else 0.0,
-				star.contents.wdLogTeff[1],
-				0,
-				c.getLTau(1)]
-		line.extend([star.contents.photometry[filt] for filt in range(FILTS) if c.getUseFilt(filt)])
-		data.append(line)
-	return data
 
+### Drops every column in a cluster DataFrame that isn't a photometry column
 def keepPhotometry(data: pdDataFrame) -> None:
 	data.drop(columns = ["id","mass1","stage1", "wdM1", "wdType1", "wdLogTeff1", "ltau1","mass2","stage2", "wdM2", "wdType2", "wdLogTeff2", "ltau2"],inplace = True)
 
+
+### Scatter photometry and return
 def scatterPhot(simdf: pdDataFrame, params: Params) -> pdDataFrame:
 	#For each filter that we are outputting
 	scatterdf = simdf.copy()
@@ -403,6 +427,7 @@ def scatterPhot(simdf: pdDataFrame, params: Params) -> pdDataFrame:
 					scatterdf[c.getFilterName(filt).decode()] += np.random.normal(0.,sigma)
 	return scatterdf
 
+### Get rid of stars that don't meet the criteria we want for scatterCluster
 def scatterClean(inputdf: pdDataFrame, params: Params) -> pdDataFrame:
 	filter_col = [col for col in inputdf if col.startswith('sig')]
 	s2n = 1/inputdf[filter_col]
@@ -414,7 +439,6 @@ def scatterClean(inputdf: pdDataFrame, params: Params) -> pdDataFrame:
 	# print(params.limitS2N,params.brightLimit[0],params.brightLimit[1],params.brightLimit[2])
 	return outputdf.loc[((outputdf[filt]>brightLimit) & (outputdf[filt]<faintLimit))| (outputdf["stage1"] == WD) | (outputdf["pop"] == 9)]
 
-
-	with pd.option_context('display.max_rows', None,):
-		print(outputdf.loc[((outputdf[filt]<brightLimit) &  (outputdf[filt]<faintLimit))| (outputdf["stage1"] == WD) | (outputdf["pop"] == 9)])
-	
+	# with pd.option_context('display.max_rows', None,):
+	# 	print(outputdf.loc[((outputdf[filt]<brightLimit) &  (outputdf[filt]<faintLimit))| (outputdf["stage1"] == WD) | (outputdf["pop"] == 9)])
+	# 

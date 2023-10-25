@@ -7,23 +7,23 @@
 //There are a few places in the code that test for SAMPLE_TYPE > or <.
 #define MASS                -2
 #define AGE_DURING_WANDER   -1          // age sampling during AGE_WANDER (defined in samplers.h)
-#define AGE	                 0          // age sampling
-#define YYY		               1	        // helium sampling
-#define FEH	                 2          // metallicity sampling
-#define MOD	                 3          // modulus sampling
+#define AGE                  0          // age sampling
+#define YYY                  1          // helium sampling
+#define FEH                  2          // metallicity sampling
+#define MOD                  3          // modulus sampling
 #define ABS                  4           // absorption sampling;
 
 #define NPARAMS              5
 
 /*** Define a structure model that houses information about the evolution model ***/
 struct model{
-	int evoModel;
+  int evoModel;
   int brownDwarfEvol;
-	int mainSequenceEvol;
-	int IFMR;
-	int WDcooling;
-	int WDatm;
-	int filterSet;
+  int mainSequenceEvol;
+  int IFMR;
+  int WDcooling;
+  int WDatm;
+  int filterSet;
   int numFilts;
   int needFS;
   double minMass;
@@ -55,14 +55,14 @@ struct star{
   double  variance[FILTS];
   double  useFilt[FILTS];
   double  U;
-  double  massRatio;			// massRatio = secondary mass / primary mass (between 0 and 1)
+  double  massRatio;      // massRatio = secondary mass / primary mass (between 0 and 1)
   int     status[2];
   int     wdType[2];
 
   int     isFieldStar;
   int     useDuringBurnIn;              // switch whether to use star to burn in cluster parameters
-  double  clustStarPriorDens;		// prior probability that the star is a cluster star
-  double  clustStarProposalDens;	// proposal density for steps to the cluster star model
+  double  clustStarPriorDens;   // prior probability that the star is a cluster star
+  double  clustStarProposalDens;  // proposal density for steps to the cluster star model
 
   double  beta[NPARAMS][2];
   double  betaMassRatio[2];

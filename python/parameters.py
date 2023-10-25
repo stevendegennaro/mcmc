@@ -41,6 +41,7 @@ class Params:
 		self.path = "../outputs/"
 		self.updateFileStem()
 		self.modelPath = "../models"
+		self.scatfile = 'tmp'
 
 	def addPop(self,popParams: List):
 		self.nPops += 1
