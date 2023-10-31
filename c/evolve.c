@@ -158,9 +158,6 @@ for all of the stars.  If the index is positive, it will use that element of the
   }
 }
 
-
-
-
 void returnIso(struct cluster *pCluster){
   void *tempAlloc;
   int j;
@@ -174,8 +171,8 @@ void returnIso(struct cluster *pCluster){
   
   // Figure out how many stars there are in the isochrone
   deriveAgbTipMass(pCluster);
-  //printf("isochrone.AgbTurnoffMass = %f, AGBt_zmass = %f\n",isochrone.AgbTurnoffMass,pCluster->AGBt_zmass);
-  
+  // printf("isochrone.AgbTurnoffMass = %f, AGBt_zmass = %f\n",isochrone.AgbTurnoffMass,pCluster->AGBt_zmass);
+  // printf("%f %f %f %f %d\n",isochrone.logAge,isochrone.FeH,isochrone.Y, isochrone.z,isochrone.nEntries);
   int nWD = (pCluster->M_wd_up - isochrone.AgbTurnoffMass)/0.01;
   pCluster->nStars = isochrone.nEntries + nWD;
   

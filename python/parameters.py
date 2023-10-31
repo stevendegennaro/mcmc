@@ -4,8 +4,6 @@ from typing import List
 class Params:
 	def __init__(self):
 		self.seed = 1
-		self.sim = 1
-		self.scat = 1
 		self.verbose = 0
 		self.nPops = 1
 		self.nSystems = [200]		#create excess, as some will be RGB, HB, & AGB stars
@@ -30,7 +28,6 @@ class Params:
 		self.exposures =  [.03,.02,.02,.02,0.1,0,0,0,0,0,0,0,0,0]
 		self.nFieldStars = 50
 		self.nBrownDwarfs = 0
-		self.keepRatio = 0.75   #Keep 75% of each population made in simCluster in scatter cluster
 
 		self.suffix = 'fe' + str(self.Fe_H[0])\
 							+ '.a' + "{:.2f}".format(self.logClusAge[0]) \
@@ -41,7 +38,6 @@ class Params:
 		self.path = "../outputs/"
 		self.updateFileStem()
 		self.modelPath = "../models"
-		self.scatfile = 'tmp'
 
 	def addPop(self,popParams: List):
 		self.nPops += 1

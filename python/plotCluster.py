@@ -20,8 +20,8 @@ def createIso():
 	iso["pop"] = pop
 	iso = iso[iso["V"]<90]
 	iso = iso[iso["mass1"] >= pIso.contents.evoModels.minMass]
-	#with pd.option_context('display.max_rows', None,):
-	#	print(iso)
+	# with pd.option_context('display.max_rows', None,):
+	# 	print(iso)
 
 # Create cluster with stars drawn from IMF
 def createSim():
@@ -56,17 +56,21 @@ def createScatter():
 	# Scatter the data
 	global scattered
 	scattered = st.scatterPhot(sim[0:params.nSystems[0]],params)
-	if field is not None: scatterfield = st.scatterPhot(field,params)
-	scattered = pd.concat([scattered,scatterfield])
+	if field is not None:
+		scatterfield = st.scatterPhot(field,params)
+		scattered = pd.concat([scattered,scatterfield])
 	#scattered = st.scatterClean(scattered,params)
 	#with pd.option_context('display.max_rows', None,): print(scattered.loc[:,"U":"sigI"])
 
 def scatterField():
-	# Scatter the field star data only
-	if field is not None: scatterfield = st.scatterPhot(field,params)
 	global scattered
+	# Get rid of the old field stars
 	scattered = scattered.loc[scattered["pop"] != 9]
-	scattered = pd.concat([scattered,scatterfield])
+
+	# Scatter the new field star data only
+	if field is not None: 
+		scatterfield = st.scatterPhot(field,params)
+		scattered = pd.concat([scattered,scatterfield])
 	#scattered = st.scatterClean(scattered,params)
 	#with pd.option_context('display.max_rows', None,): print(scattered.loc[:,"U":"sigI"])
 
@@ -75,17 +79,26 @@ def scatterField():
 ##########################
 
 def newIso(val):
+	# resetColor(isoHide)
+	# resetColor(simHide)
+	# resetColor(scatterHide)
+	# resetColor(fieldHide)
 	deleteIso()
 	deleteSim()
 	deleteScatter()
+	deleteFieldStars()
 	createIso()
 	createSim()
+	createFieldStars()
 	createScatter()
 	plotIso()
 	plotSim()
+	plotFieldStars()
 	plotScatter()
 
 def newSim(val):
+	# resetColor(simHide)
+	# resetColor(scatterHide)
 	deleteSim()
 	deleteScatter()
 	createSim()
@@ -94,11 +107,14 @@ def newSim(val):
 	plotScatter()
 
 def newScatter(val):
+	# resetColor(scatterHide)
 	deleteScatter()
 	createScatter()
 	plotScatter()
 
 def newFieldStars(val):
+	# resetColor(scatterHide)
+	# resetColor(fieldHide)
 	deleteFieldStars()
 	deleteScatter()
 	createFieldStars()
@@ -110,19 +126,34 @@ def newFieldStars(val):
 ##### Toggle Functions #####
 ############################
 
+def hideColor(button):
+	button.ax.set_facecolor(hoverColorOn)
+	button.color = buttonColorOn
+	button.hovercolor = hoverColorOn
+	button.label.set_text("Show")
+
+def resetColor(button):
+	button.ax.set_facecolor(hoverColor)
+	button.color = buttonColor
+	button.hovercolor = hoverColor
+	button.label.set_text("Hide")
+
 def toggleIso(val):
 	[p[0].set_visible(not p[0].get_visible()) for p in isoPoints]
 	if isoPoints[0][0].get_visible(): reDrawIso()
+	else: hideColor(isoHide)
 	fig.canvas.draw()
 
 def toggleSim(val):
 	[p.set_visible(not p.get_visible()) for p in simPoints]
 	if simPoints[0].get_visible(): reDrawSim()
+	else: hideColor(simHide)
 	fig.canvas.draw()
 
 def toggleField(val):
 	[p.set_visible(not p.get_visible()) for p in fieldPoints]
 	if fieldPoints[0].get_visible(): reDrawFieldStars()
+	else: hideColor(fieldHide)
 	fig.canvas.draw()
 
 def toggleScatter(val):
@@ -136,20 +167,7 @@ def toggleScatter(val):
 			p.set_visible(not p.get_visible())
 
 	if scatterPoints[0].get_visible(): reDrawScatter()
-	fig.canvas.draw()
-
-def hideScatter():
-	# remove the points
-	scatterPoints[0].set_visible(False)
-
-	if len(scatterPoints) > 1:
-		ebars = scatterPoints[1]
-		ebars[0].set_visible(False)
-		for p in ebars[1]:
-			p.set_visible(False)
-		for p in ebars[2]:
-			p.set_visible(False)
-
+	else: hideColor(scatterHide)
 	fig.canvas.draw()
 
 
@@ -176,27 +194,55 @@ def refreshLimits():
 
 def plotIso():
 	global isoPoints
+	if "isoHide" in globals():
+		resetColor(isoHide)
 	isoPoints = mc.HR(iso, band1 = band1, band2 = band2, type = "l", overplot=True)
 	refreshLimits()
 	fig.canvas.draw()
 
 def plotSim():
 	global simPoints
-	simPoints = mc.HR(sim[0:params.nSystems[0]], band1 = band1, band2 = band2, overplot = True,ebars = False, color="red", marker = "o")
+	if "simHide" in globals():
+		resetColor(simHide)
+	simPoints = mc.HR(sim[0:params.nSystems[0]], 
+						band1 = band1, 
+						band2 = band2, 
+						overplot = True,
+						ebars = False, 
+						color="red", 
+						size = 10,
+						marker = "o")
 	refreshLimits()
 	fig.canvas.draw()
 
 def plotScatter():
 	global scatterPoints
+	if "scatterHide" in globals():
+		resetColor(scatterHide)
 	scatterCleaned = st.scatterClean(scattered,params)
-	#with pd.option_context('display.max_rows', None,): print(scatterCleaned.loc[:,"U":"sigI"])
-	scatterPoints = mc.HR(scatterCleaned, band1 = band1, band2 = band2, overplot=True, ebars = True, color = "blue")
+	scatterPoints = mc.HR(scatterCleaned, 
+							band1 = band1, 
+							band2 = band2, 
+							overplot=True, 
+							ebars = True, 
+							size = 10,
+							color = "blue")
 	refreshLimits()
 	fig.canvas.draw()
 
 def plotFieldStars():
 	global fieldPoints
-	if field is not None: fieldPoints = mc.HR(field, band1 = band1, band2 = band2, overplot=True, ebars = True, color = "green",marker = "o")
+	if "fieldHide" in globals():
+		resetColor(fieldHide)
+	if field is not None: 
+		fieldPoints = mc.HR(field, 
+							band1 = band1, 
+							band2 = band2, 
+							overplot=True, 
+							ebars = True, 
+							color = "green",
+							size= 10,
+							marker = "o")
 	refreshLimits()
 	fig.canvas.draw()
 
@@ -208,6 +254,7 @@ def plotBrightLimits():
 def deleteIso():
 	[p[0].remove() for p in isoPoints]
 
+# redraws the isochrone without recalculating it
 def reDrawIso():
 	deleteIso()
 	plotIso()
@@ -215,13 +262,16 @@ def reDrawIso():
 def deleteSim():
 	[p.remove() for p in simPoints]
 
+# Redraws simluated stars without resimulating them
 def reDrawSim():
 	deleteSim()
 	plotSim()
 
 def deleteFieldStars():
-	[p.remove() for p in fieldPoints]
+	if field is not None:
+		[p.remove() for p in fieldPoints]
 
+# Redraws field stars without resimulating them
 def reDrawFieldStars():
 	deleteFieldStars()
 	plotFieldStars()
@@ -236,6 +286,7 @@ def deleteScatter():
 		for p in ebars[2]:
 			p.remove()
 
+# redraws the scattered points without resimulating or rescattering
 def reDrawScatter():
 	deleteScatter()
 	plotScatter()
@@ -249,56 +300,71 @@ def reDrawScatter():
 def toggleBand1(val):
 
 	global b1,b2,band1
-	if band1ax.index(val.inaxes) != b2:
-		b1 = band1ax.index(val.inaxes)
-	else:
+
+	### Check whatever band we just clicked. If it's already the band that 
+	### we are using, or the same band as the other band, do nothing
+	if band1ax.index(val.inaxes) == b2 or band1ax.index(val.inaxes) == b1:
 		return
 
-	# Set button colors
+	### Otherwise, set band 1 to the band we just clicked
+	b1 = band1ax.index(val.inaxes)
 	band1 = filters[b1]
+
+	# Set button colors
 	for i in range(len(band1ax)):
 		if i == b1:
-			band1ax[i].set_facecolor("darkgray")
-			band1Buttons[i].color = "dimgray"
-			band1Buttons[i].hovercolor = "darkgray"
+			band1ax[i].set_facecolor(hoverColorOn)
+			band1Buttons[i].color = buttonColorOn
+			band1Buttons[i].hovercolor = hoverColorOn
 		else:
-			band1ax[i].set_facecolor(buttoncolor)
-			band1Buttons[i].color = buttoncolor
-			band1Buttons[i].hovercolor = hovercolor
+			band1ax[i].set_facecolor(buttonColor)
+			band1Buttons[i].color = buttonColor
+			band1Buttons[i].hovercolor = hoverColor
 
+	# Update axes and bright/faint limits
 	setBands()
+	
+	# Redraw graphs using new bands
 	if isoPoints[0][0].get_visible(): reDrawIso()
 	if simPoints[0].get_visible(): reDrawSim()
 	if fieldPoints[0].get_visible(): reDrawFieldStars()
 	if scatterPoints[0].get_visible(): reDrawScatter()
-	#fig.canvas.draw()
 
 def toggleBand2(val):
 
 	global b1,b2,band2
-	if band2ax.index(val.inaxes) != b1:
-		b2 = band2ax.index(val.inaxes)
-	else:
+
+	### Check whatever band we just clicked. If it's already the band that 
+	### we are using, or the same band as the other band, do nothing
+	if band2ax.index(val.inaxes) == b2 or band2ax.index(val.inaxes) == b1:
 		return
 
+	### Otherwise, set band 1 to the band we just clicked
+	b2 = band2ax.index(val.inaxes)
 	band2 = filters[b2]
+
+	# Set button colors
 	for i in range(len(band2ax)):
 		if i == b2:
-			band2ax[i].set_facecolor("darkgray")
-			band2Buttons[i].color = "dimgray"
-			band2Buttons[i].hovercolor = "darkgray"
+			band2ax[i].set_facecolor(hoverColorOn)
+			band2Buttons[i].color = buttonColorOn
+			band2Buttons[i].hovercolor = hoverColorOn
 		else:
-			band2ax[i].set_facecolor(buttoncolor)
-			band2Buttons[i].color = buttoncolor
-			band2Buttons[i].hovercolor = hovercolor
+			band2ax[i].set_facecolor(buttonColor)
+			band2Buttons[i].color = buttonColor
+			band2Buttons[i].hovercolor = hoverColor
 
+	# Update axes and bright/faint limits
 	setBands()
+	
+	# Redraw graphs using new bands
 	if isoPoints[0][0].get_visible(): reDrawIso()
 	if simPoints[0].get_visible(): reDrawSim()
 	if fieldPoints[0].get_visible(): reDrawFieldStars()
 	if scatterPoints[0].get_visible(): reDrawScatter()
-	#fig.canvas.draw()
 
+### Function to set band names to the corresponding filter names
+### Changes the axes labels and bright/faint limits accordingly
 def setBands():
 	global b1, b2, band1, band2
 	band1 = filters[b1]
@@ -307,6 +373,70 @@ def setBands():
 	ax.set_xlabel(band1 + " - " + band2)
 	params.brightLimit[2] = b2
 	fig.canvas.draw()
+
+### Function to set the age and metallicity limits of the sliders
+### when the model set is changed
+def setModelLimits():
+	age_slider.valmin = st.c.getAgeLimit(0)
+	age_slider.valmax = st.c.getAgeLimit(1)
+	age_slider.ax.set_xlim(age_slider.valmin,age_slider.valmax)
+	feh_slider.valmin = st.c.getFeHLimit(0)
+	feh_slider.valmax = st.c.getFeHLimit(1)
+	feh_slider.ax.set_xlim(feh_slider.valmin,feh_slider.valmax)
+	fig.canvas.draw()
+
+### Switch to a different model set
+def change_model(val):
+	global modelAxes
+
+	### If we are already using this model set, do nothing
+	if modelAxes.index(val.inaxes) == params.msRgbModels:
+		return
+
+	# Otherwise, set model set to new model
+	modelAxes[params.msRgbModels].set_facecolor(buttonColor)
+	modelButtons[params.msRgbModels].color = buttonColor
+	modelButtons[params.msRgbModels].hovercolor = hoverColor
+
+	params.msRgbModels = modelAxes.index(val.inaxes)
+	st.switchModels(pIso,params)
+
+	#make sure the models are loaded
+	fault = st.c.setGlobals(pIso, params.seed, params.verbose)
+	assert not fault,f"Problem loading model set {params.msRgbModels}"
+
+	# check to make sure Fe/H and logAge are in range for new models
+	if(params.logClusAge[0] < st.c.getAgeLimit(0)):
+		params.logClusAge[0] = st.c.getAgeLimit(0)
+		age_slider.set_val(params.logClusAge[0])
+	if(params.logClusAge[0] > st.c.getAgeLimit(1)):
+		params.logClusAge[0] = st.c.getAgeLimit(1)
+		age_slider.set_val(params.logClusAge[0])
+	if(params.Fe_H[0] < st.c.getFeHLimit(0)):
+		params.Fe_H[0] = st.c.getFeHLimit(0)
+		feh_slider.set_val(params.Fe_H[0])
+	if(params.Fe_H[0] > st.c.getFeHLimit(1)):
+		params.Fe_H[0] = st.c.getFeHLimit(1)
+		feh_slider.set_val(params.Fe_H[0])
+	setModelLimits()
+
+	modelAxes[params.msRgbModels].set_facecolor(hoverColorOn)
+	modelButtons[params.msRgbModels].color = buttonColorOn
+	modelButtons[params.msRgbModels].hovercolor = hoverColorOn
+
+	st.switchModels(pSim,params)
+
+	deleteIso()
+	deleteSim()
+	deleteScatter()
+	createIso()
+	createSim()
+	createScatter()
+	plotIso()
+	plotSim()
+	plotScatter()
+
+
 
 
 ##########################
@@ -425,46 +555,45 @@ plotSim()
 plotScatter()
 plotBrightLimits()
 plotFieldStars()
-refreshLimits()
 
 # Button sizes
 buttonheight = 0.05
 buttonwidth = 0.1
 pad = 0.01
 
-# Colors
-colorWidth = (2 * buttonwidth + pad) / 8.
-band1Buttons = []
-band2Buttons = []
-band1ax = filters[:]
-band2ax = filters[:]
+# Add filter buttons
+filterWidth = (2 * buttonwidth + pad) / 8.
+band1Buttons = [None] * len(filters)
+band2Buttons = [None] * len(filters)
+band1ax 	 = [None] * len(filters)
+band2ax 	 = [None] * len(filters)
 for i,filt in enumerate(filters):
-	band1ax[i] = plt.axes([figwidth + pad + i * colorWidth, .95 - (buttonheight), colorWidth, buttonheight])
-	band1Buttons.append(Button(band1ax[i], filt))
-	band2ax[i] = plt.axes([figwidth + pad + i * colorWidth, .95 - (2 * buttonheight), colorWidth, buttonheight])
-	band2Buttons.append(Button(band2ax[i], filt))
+	band1ax[i] = plt.axes([figwidth + pad + i * filterWidth, .95 - (buttonheight), filterWidth, buttonheight])
+	band1Buttons[i] = Button(band1ax[i], filt)
+	band1Buttons[i].on_clicked(toggleBand1)
+	band2ax[i] = plt.axes([figwidth + pad + i * filterWidth, .95 - (2 * buttonheight), filterWidth, buttonheight])
+	band2Buttons[i] = Button(band2ax[i], filt)
+	band2Buttons[i].on_clicked(toggleBand2)
 
-for band1Button in band1Buttons:
-	band1Button.on_clicked(toggleBand1)
+# style filter buttons
+buttonColor = band1Buttons[0].color
+hoverColor = band1Buttons[0].hovercolor
+buttonColorOn = "dimgray"
+hoverColorOn = "darkgray"
+band1ax[b1].set_facecolor(buttonColorOn)
+band1Buttons[b1].color = buttonColorOn
+band1Buttons[b1].hovercolor = hoverColorOn
+band2ax[b2].set_facecolor(buttonColorOn)
+band2Buttons[b2].color = buttonColorOn
+band2Buttons[b2].hovercolor = hoverColorOn
 
-for band2Button in band2Buttons:
-	band2Button.on_clicked(toggleBand2)
-
-buttoncolor = band1Buttons[0].color
-hovercolor = band1Buttons[0].hovercolor
-band1ax[b1].set_facecolor("dimgray")
-band1Buttons[b1].color = "dimgray"
-band1Buttons[b1].hovercolor = "darkgray"
-band2ax[b2].set_facecolor("dimgray")
-band2Buttons[b2].color = "dimgray"
-band2Buttons[b2].hovercolor = "darkgray"
-
+#### Buttons to Regenerate and to Hide/show
 # Isochrones
 axes = plt.axes([figwidth + pad, .95 - (3 * buttonheight + pad), buttonwidth, buttonheight])
 isoButton = Button(axes, 'Isochrone')
 isoButton.on_clicked(newIso)
 axes = plt.axes([figwidth + pad + buttonwidth + pad, .95 - (3 * buttonheight + pad), buttonwidth, buttonheight])
-isoHide = Button(axes, 'Show/Hide')
+isoHide = Button(axes, 'Hide')
 isoHide.on_clicked(toggleIso)
 
 # sim
@@ -472,7 +601,7 @@ axes = plt.axes([figwidth + pad, .95 - (4 * buttonheight + 2 * pad), buttonwidth
 simButton = Button(axes, 'simulate')
 simButton.on_clicked(newSim)
 axes = plt.axes([figwidth + pad + buttonwidth + pad, .95 - (4 * buttonheight + 2 * pad), buttonwidth, buttonheight])
-simHide = Button(axes, 'Show/Hide')
+simHide = Button(axes, 'Hide')
 simHide.on_clicked(toggleSim)
 
 # field stars
@@ -480,7 +609,7 @@ axes = plt.axes([figwidth + pad, .95 - (5 * buttonheight + 3 * pad), buttonwidth
 fieldButton = Button(axes, 'field stars')
 fieldButton.on_clicked(newFieldStars)
 axes = plt.axes([figwidth + pad + buttonwidth + pad, .95 - (5 * buttonheight + 3 * pad), buttonwidth, buttonheight])
-fieldHide = Button(axes, 'Show/Hide')
+fieldHide = Button(axes, 'Hide')
 fieldHide.on_clicked(toggleField)
 
 # scatter
@@ -488,80 +617,31 @@ axes = plt.axes([figwidth + pad, .95 - (6 * buttonheight + 4 * pad), buttonwidth
 scatterButton = Button(axes, 'scatter')
 scatterButton.on_clicked(newScatter)
 axes = plt.axes([figwidth + pad + buttonwidth + pad, .95 - (6 * buttonheight + 4 * pad), buttonwidth, buttonheight])
-scatterHide = Button(axes, 'Show/Hide')
+scatterHide = Button(axes, 'Hide')
 scatterHide.on_clicked(toggleScatter)
-
 
 #########################
 #### Model Switching ####
 #########################
 
-def setModelLimits():
-	age_slider.valmin = st.c.getAgeLimit(0)
-	age_slider.valmax = st.c.getAgeLimit(1)
-	age_slider.ax.set_xlim(age_slider.valmin,age_slider.valmax)
-	feh_slider.valmin = st.c.getFeHLimit(0)
-	feh_slider.valmax = st.c.getFeHLimit(1)
-	feh_slider.ax.set_xlim(feh_slider.valmin,feh_slider.valmax)
-	fig.canvas.draw()
-
-def change_model(m: int):
-	if m == params.msRgbModels:
-		return
-	else:
-		# Set models to new model
-		params.msRgbModels = m
-		st.switchModels(pIso,params)
-
-		#make sure the models are loaded
-		fault = st.c.setGlobals(pIso, params.seed, params.verbose)
-		if fault: sys.exit()
-
-		# check to make sure Fe/H and logAge are in range for new models
-		if(params.logClusAge[0] < st.c.getAgeLimit(0)):
-			params.logClusAge[0] = st.c.getAgeLimit(0)
-			age_slider.set_val(params.logClusAge[0])
-		if(params.logClusAge[0] > st.c.getAgeLimit(1)):
-			params.logClusAge[0] = st.c.getAgeLimit(1)
-			age_slider.set_val(params.logClusAge[0])
-		if(params.Fe_H[0] < st.c.getFeHLimit(0)):
-			params.Fe_H[0] = st.c.getFeHLimit(0)
-			feh_slider.set_val(params.Fe_H[0])
-		if(params.Fe_H[0] > st.c.getFeHLimit(1)):
-			params.Fe_H[0] = st.c.getFeHLimit(1)
-			feh_slider.set_val(params.Fe_H[0])
-		setModelLimits()
-
-
-		st.switchModels(pSim,params)
-
-		deleteIso()
-		deleteSim()
-		deleteScatter()
-		createIso()
-		createSim()
-		createScatter()
-		plotIso()
-		plotSim()
-		plotScatter()
-
-
-
 
 # Models
-modelsButtons = []
-axes = plt.axes([figwidth + pad, .95 - (10 * buttonheight + pad), buttonwidth, buttonheight])
-modelsButtons.append(Button(axes, 'Girardi'))
-axes = plt.axes([figwidth + pad + buttonwidth + pad, .95 - (10 * buttonheight + pad), buttonwidth, buttonheight])
-modelsButtons.append(Button(axes, 'Chaboyer'))
-axes = plt.axes([figwidth + pad, .95 - (11 * buttonheight + 2 * pad), buttonwidth, buttonheight])
-modelsButtons.append(Button(axes, 'Yale-Yonsai'))
-axes = plt.axes([figwidth + pad + buttonwidth + pad, .95 - (11 * buttonheight + 2 * pad), buttonwidth, buttonheight])
-modelsButtons.append(Button(axes, 'DSED'))
+modelNames = ['Girardi','Chaboyer','Yale-Yonsai','DSED']
+modelPosition = [[0,0],[1,1],[0,1],[1,0]]
+modelButtons = [None] * 4
+modelAxes = [None] * 4
 
-for s in range(len(modelsButtons)):
-	exec(f"modelsButtons[{s}].on_clicked(lambda _: change_model({s}))")
+for i in range(4):
+	modelAxes[i] = plt.axes([figwidth + pad + modelPosition[i][0] * (buttonwidth + pad), 
+						     .95 - (10 * buttonheight + pad + modelPosition[i][1] * (buttonheight + pad)), 
+						     buttonwidth, 
+						     buttonheight])
+	modelButtons[i] = Button(modelAxes[i], modelNames[i])
+	modelButtons[i].on_clicked(change_model)
 
+modelAxes[params.msRgbModels].set_facecolor(buttonColorOn)
+modelButtons[params.msRgbModels].color = buttonColorOn
+modelButtons[params.msRgbModels].hovercolor = hoverColorOn
 
 
 #################

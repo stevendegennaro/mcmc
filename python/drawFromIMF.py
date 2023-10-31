@@ -1,5 +1,6 @@
 import numpy as np
 import ctypes
+import matplotlib.pyplot as plt
 
 #*****************************************************************************************
 # last update: 28sep05
@@ -12,7 +13,7 @@ import ctypes
 #*****************************************************************************************/
 def drawFromIMF() -> float:
 	mf_sigma = 0.67729
-	mf_mu = -1.02;
+	mf_mu = -1.02
 
 	logMass = np.random.normal(mf_mu, mf_sigma)
 	while (logMass < -4) or (logMass > 2.0):    # keep within mass (0.15 + EPS to 100 Mo) limits
@@ -20,6 +21,32 @@ def drawFromIMF() -> float:
 
 	zamsMass = 10.0 ** logMass
 	return zamsMass
+
+def plotIMF(log=False):
+	
+	def gaussian(x, mu, sig):
+		return 1./(np.sqrt(2.*np.pi)*sig)*np.exp(-np.power((x - mu)/sig, 2.)/2)
+	
+	mf_sigma = 0.67729
+	mf_mu = -1.02
+
+	logmasses = np.arange(-4,2,.01)
+	masses = np.power(10,logmasses)
+	dens = gaussian(logmasses,mf_mu,mf_sigma) * 1000
+	star_masses = np.array([drawFromIMF() for _ in range(10000)])
+
+	if log:
+		plt.plot(logmasses,dens,color="red")
+		plt.hist(np.log10(star_masses),50,color="gray", edgecolor = "Black")
+		plt.gca().set_xlabel("Log10(Mass)")
+	else:
+		# plt.plot(masses,dens,color="red")
+		plt.hist(star_masses[star_masses<10],100,color="gray", edgecolor = "Black")
+		plt.gca().set_xlabel("Mass")
+
+	plt.gca().set_ylabel("N Stars")
+	plt.title("Initial Mass Function")
+	plt.show()
 
 
 # dfIMF = ctypes.CDLL("../c/drawFromIMF.so")

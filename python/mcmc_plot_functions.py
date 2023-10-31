@@ -47,6 +47,8 @@ def HR(data:PandasDataFrame,
 		plt.figure()
 		plt.show()
 		plt.gca().invert_yaxis()
+		plt.gca().set_ylabel(band2)
+		plt.gca().set_xlabel(band1 + " - " + band2)
 
 	if type == "l":
 		if 'stage2' in data.columns:
