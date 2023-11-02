@@ -13,7 +13,7 @@ OBJS = binSearch.o gBaraffeMag.o gBergMag.o \
 
 RAND_OBJS = gennorm.o mt19937ar.o
 
-SIM_OBJS = drawFromIMF.o simCluster.o
+PLOT_OBJS = plotCluster.o
 
 SCATTER_OBJS = scatterCluster.o
 
@@ -31,8 +31,8 @@ all : $(OBJS) $(RAND_OBJS) $(SCATTER_OBJS) $(SIM_OBJS) $(STAT_OBJS) $(MAKE_CMD_O
 mcmc : $(OBJS) $(STAT_OBJS) $(RAND_OBJS)
 	$(CC) $(LFLAGS) -o mcmc $(OBJS) $(STAT_OBJS) $(RAND_OBJS)  
 
-simCluster : $(OBJS) $(SIM_OBJS) $(RAND_OBJS) $(SO_OBJS) $(SCATTER_OBJS)
-	$(CC) -fPIC $(OBJS) $(SIM_OBJS) $(SCATTER_OBJS) $(RAND_OBJS) -shared -o simCluster.so
+plotCluster : $(OBJS) $(PLOT_OBJS) $(RAND_OBJS)
+	$(CC) -fPIC $(OBJS) $(PLOT_OBJS) $(RAND_OBJS) -shared -o plotCluster.so
 
 #scatterCluster : $(SCATTER_OBJS) $(RAND_OBJS)
 #	$(CC) -fPIC $(LFLAGS) -shared $(SCATTER_OBJS) $(RAND_OBJS) -o scatterCluster.so 
@@ -112,8 +112,8 @@ samplers.o : samplers.c
 scatterCluster.o : scatterCluster.c 
 	$(CC) -c $(CFLAGS) scatterCluster.c 
 
-simCluster.o : simCluster.c 
-	$(CC) -c $(CFLAGS) simCluster.c 
+plotCluster.o : plotCluster.c 
+	$(CC) -c $(CFLAGS) plotCluster.c 
 
 solve.o : solve.c
 	$(CC) -c $(CFLAGS) solve.c

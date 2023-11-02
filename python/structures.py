@@ -10,7 +10,7 @@ pdDataFrame = TypeVar('pd.core.frame.DataFrame')
 
 # Read in the shared object file that contains all the variable,
 # structures, and functions in C that will be needed by Python
-c = ctypes.CDLL("../c/simCluster.so")
+c = ctypes.CDLL("../c/plotCluster.so")
 
 ## Pull in and parse the #define macros in evolve.h and structures.h
 macros = getCMacros("../c/structures.h")
