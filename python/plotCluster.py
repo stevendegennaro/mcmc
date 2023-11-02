@@ -79,10 +79,6 @@ def scatterField():
 ##########################
 
 def newIso(val):
-	# resetColor(isoHide)
-	# resetColor(simHide)
-	# resetColor(scatterHide)
-	# resetColor(fieldHide)
 	deleteIso()
 	deleteSim()
 	deleteScatter()
@@ -97,8 +93,6 @@ def newIso(val):
 	plotScatter()
 
 def newSim(val):
-	# resetColor(simHide)
-	# resetColor(scatterHide)
 	deleteSim()
 	deleteScatter()
 	createSim()
@@ -107,14 +101,11 @@ def newSim(val):
 	plotScatter()
 
 def newScatter(val):
-	# resetColor(scatterHide)
 	deleteScatter()
 	createScatter()
 	plotScatter()
 
 def newFieldStars(val):
-	# resetColor(scatterHide)
-	# resetColor(fieldHide)
 	deleteFieldStars()
 	deleteScatter()
 	createFieldStars()
@@ -175,6 +166,11 @@ def toggleScatter(val):
 ##### Plotting functions #####
 ##############################
 
+def plotBrightLimits():
+	global brightLines
+	brightLines = [plt.axhline(params.brightLimit[0],linestyle = "dashed",color="gray",zorder=-1)]
+	brightLines.append(plt.axhline(params.brightLimit[1],linestyle = "dashed",color="gray",zorder=-1))
+
 def refreshLimits():
 	# Figure out min and max x and y values for the graph
 	(minxiso,maxxiso),(minyiso, maxyiso) = mc.getHRlims(iso,band1,band2)
@@ -192,6 +188,8 @@ def refreshLimits():
 		brightLimit_slider.valmax = miny
 		brightLimit_slider.ax.set_xlim(brightLimit_slider.valmax,brightLimit_slider.valmin)
 
+### Isocrhone ###
+
 def plotIso():
 	global isoPoints
 	if "isoHide" in globals():
@@ -199,6 +197,16 @@ def plotIso():
 	isoPoints = mc.HR(iso, band1 = band1, band2 = band2, type = "l", overplot=True)
 	refreshLimits()
 	fig.canvas.draw()
+
+def deleteIso():
+	[p[0].remove() for p in isoPoints]
+
+# redraws the isochrone without recalculating it
+def reDrawIso():
+	deleteIso()
+	plotIso()
+
+### Simulated stars ###
 
 def plotSim():
 	global simPoints
@@ -215,6 +223,16 @@ def plotSim():
 	refreshLimits()
 	fig.canvas.draw()
 
+def deleteSim():
+	[p.remove() for p in simPoints]
+
+# Redraws simluated stars without resimulating them
+def reDrawSim():
+	deleteSim()
+	plotSim()
+
+### Scattered stars ###
+
 def plotScatter():
 	global scatterPoints
 	if "scatterHide" in globals():
@@ -229,6 +247,23 @@ def plotScatter():
 							color = "blue")
 	refreshLimits()
 	fig.canvas.draw()
+
+def deleteScatter():
+	scatterPoints[0].remove()
+	if len(scatterPoints) > 1:
+		ebars = scatterPoints[1]
+		ebars[0].remove()
+		for p in ebars[1]:
+			p.remove()
+		for p in ebars[2]:
+			p.remove()
+
+# redraws the scattered points without resimulating or rescattering
+def reDrawScatter():
+	deleteScatter()
+	plotScatter()
+
+### Field Stars ###
 
 def plotFieldStars():
 	global fieldPoints
@@ -246,27 +281,6 @@ def plotFieldStars():
 	refreshLimits()
 	fig.canvas.draw()
 
-def plotBrightLimits():
-	global brightLines
-	brightLines = [plt.axhline(params.brightLimit[0],linestyle = "dashed",color="gray",zorder=-1)]
-	brightLines.append(plt.axhline(params.brightLimit[1],linestyle = "dashed",color="gray",zorder=-1))
-
-def deleteIso():
-	[p[0].remove() for p in isoPoints]
-
-# redraws the isochrone without recalculating it
-def reDrawIso():
-	deleteIso()
-	plotIso()
-
-def deleteSim():
-	[p.remove() for p in simPoints]
-
-# Redraws simluated stars without resimulating them
-def reDrawSim():
-	deleteSim()
-	plotSim()
-
 def deleteFieldStars():
 	if field is not None:
 		[p.remove() for p in fieldPoints]
@@ -275,22 +289,6 @@ def deleteFieldStars():
 def reDrawFieldStars():
 	deleteFieldStars()
 	plotFieldStars()
-
-def deleteScatter():
-	scatterPoints[0].remove()
-	if len(scatterPoints) > 1:
-		ebars = scatterPoints[1]
-		ebars[0].remove()
-		for p in ebars[1]:
-			p.remove()
-		for p in ebars[2]:
-			p.remove()
-
-# redraws the scattered points without resimulating or rescattering
-def reDrawScatter():
-	deleteScatter()
-	plotScatter()
-
 
 
 #################################
@@ -436,9 +434,6 @@ def change_model(val):
 	plotSim()
 	plotScatter()
 
-
-
-
 ##########################
 #### Slider Functions ####
 ##########################
@@ -541,7 +536,6 @@ createSim()
 createFieldStars()
 createScatter()
 
-
 # Set labels and make room for buttons and sliders
 plt.ion()
 fig,ax = plt.subplots(figsize=(13,7))
@@ -620,12 +614,7 @@ axes = plt.axes([figwidth + pad + buttonwidth + pad, .95 - (6 * buttonheight + 4
 scatterHide = Button(axes, 'Hide')
 scatterHide.on_clicked(toggleScatter)
 
-#########################
-#### Model Switching ####
-#########################
-
-
-# Models
+#### Model Switching Buttons ####
 modelNames = ['Girardi','Chaboyer','Yale-Yonsai','DSED']
 modelPosition = [[0,0],[1,1],[0,1],[1,0]]
 modelButtons = [None] * 4
@@ -658,7 +647,7 @@ nStars_slider = Slider(
 	valmin=1,
 	valmax=maxStars,
 	valinit=params.nSystems[0],
-	valfmt='%0.0f',
+	valstep = 1
 )
 nStars_slider.on_changed(change_nStars)
 
@@ -732,6 +721,7 @@ av_slider.on_changed(change_av)
 
 # Exposures
 exposure_sliders = []
+exposure_axes = [None] * len(filters)
 for i,filt in enumerate(filters):
 	# Absorption
 	exposure_ax = fig.add_axes([figwidth + (2 * buttonwidth) + (8 * pad), .95 - ((9 + i) * slider_height), slider_width, slider_height])
@@ -772,7 +762,6 @@ brightLimit_slider = RangeSlider(
 brightLimit_slider.on_changed(change_brightLimit)
 refreshLimits()
 
-
 #####################
 #### File Saving ####
 #####################
@@ -797,30 +786,23 @@ def save_sim(val):
 	with open(filename, "w") as f:
 		sim_out.to_csv(f,sep=" ",index=False)
 
-	# exported = mc.import_from_sim_cluster(filename,"")
-	# mc.HR(exported,overplot=True,color="yellow",band1=band1,band2=band2,marker="o")
-	# fig.canvas.draw()
-
 def save_scatter(val):
 	filename = save_text_box.text + ".scatter"
 	header = getScatterHeader()
 	scatter_out  = st.scatterClean(scattered,params)
 
 	scatter_out["massRatio"] = scatter_out["mass2"]/scatter_out["mass1"]
-	# print(len(scatter_out.index))
 	clusterMemberPrior = len(scatter_out[scatter_out["pop"] != 9].index)/len(scatter_out.index)
 	scatter_out["CMprior"] = clusterMemberPrior
 	scatter_out["useDuringBurnIn"] = 1
 	scatter_out.loc[scatter_out["pop"] == 9,"useDuringBurnIn"] = 0
 	scatter_out = scatter_out.reindex(columns=header)
-	# print(scatter_out)
 	with open(filename, "w") as f:
 		scatter_out.to_csv(f,sep=" ",index=False)
 
-	# exported = mc.import_from_sim_cluster(filename,"")
-	# mc.HR(exported,overplot=True,color="yellow",band1=band1,band2=band2)
-	# fig.canvas.draw()
-
+textwidth = 1 - (figwidth + 3 * pad + 2 * buttonwidth) - pad
+axes = plt.axes([1 - textwidth - pad, ax.get_position().bounds[1], textwidth, buttonheight])
+save_text_box = TextBox(axes,label = None,initial = params.file_stem)
 
 axes = plt.axes([figwidth + pad, ax.get_position().bounds[1], buttonwidth, buttonheight])
 save_sim_button = Button(axes, 'Save Sim')
@@ -828,10 +810,6 @@ axes = plt.axes([figwidth + pad + buttonwidth + pad, ax.get_position().bounds[1]
 save_scatter_button = Button(axes, 'Save Scatter')
 save_sim_button.on_clicked(save_sim)
 save_scatter_button.on_clicked(save_scatter)
-
-textwidth = 1 - (figwidth + 3 * pad + 2 * buttonwidth) - pad
-axes = plt.axes([1 - textwidth - pad, ax.get_position().bounds[1], textwidth, buttonheight])
-save_text_box = TextBox(axes,label = None,initial = params.file_stem)
 
 plt.sca(ax)
 plt.show()
