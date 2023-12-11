@@ -262,8 +262,6 @@ def populateCluster(pCluster: clusterPtr, fractionBinary: float = 0.0) -> None:
         else:
             star.contents.massRatio = 0.0
 
-    #print(pCluster.contents)
-
     c.evolve(pCluster, -1)                          # Evolve stars
 
 ### Create random field stars
@@ -417,16 +415,16 @@ def scatterPhot(simdf: pdDataFrame, params: Params) -> pdDataFrame:
     #For each filter that we are outputting
     scatterdf = simdf.copy()
     for filt in range(FILTS):
-            if c.getUseFilt(filt):
-                if params.exposures[filt] > 0.0:
-                    #Check if the star's photometry is above our desired limiting S/N
-                    logS2N  = s2nCoeffs[filt][0] - s2nCoeffs[filt][1] * scatterdf[c.getFilterName(filt).decode()]
-                    s2n = 10. ** logS2N
-                    s2n *= np.sqrt(params.exposures[filt])
-                    sigma = 1./(s2n)
-                    sigma[sigma < 0.005] = 0.005
-                    scatterdf["sig" + c.getFilterName(filt).decode()] = sigma
-                    scatterdf[c.getFilterName(filt).decode()] += np.random.normal(0.,sigma)
+        if c.getUseFilt(filt):
+            if params.exposures[filt] > 0.0:
+                #Check if the star's photometry is above our desired limiting S/N
+                logS2N  = s2nCoeffs[filt][0] - s2nCoeffs[filt][1] * scatterdf[c.getFilterName(filt).decode()]
+                s2n = 10. ** logS2N
+                s2n *= np.sqrt(params.exposures[filt])
+                sigma = 1./(s2n)
+                sigma[sigma < 0.005] = 0.005
+                scatterdf["sig" + c.getFilterName(filt).decode()] = sigma
+                scatterdf[c.getFilterName(filt).decode()] += np.random.normal(0.,sigma)
     return scatterdf
 
 ### Get rid of stars that don't meet the criteria we want for scatterCluster
